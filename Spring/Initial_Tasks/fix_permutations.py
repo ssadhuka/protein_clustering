@@ -41,8 +41,8 @@ def make_dataframe(df, data, sequence):
     data['residue_number'] = data[0].str.strip().str[3:].str[:-1]
     data = data[data['residue_number'].astype(int).isin(list(set(df['residue_number'])))]
     data['residue_name_convert'] = data[0].str.strip().str[2:3]
-    
-    print(data)
+    data['prob'] = 1 - data[2]/2
+    print(data['prob'])
     
     # get x, y, z coords of each residue as mean coordinate of all atoms making up residue
     for i in ['x', 'y', 'z']:
@@ -84,11 +84,13 @@ def get_dist_vec(df, risk):
     # subset dataframe based on risk or non-risk
     if risk: 
         df_dist = df[df['score'] < 0]
+        #print(df_dist)
     
     else: 
         df_dist = df[df['score'] > 0]
     
     df_dist = df_dist.drop_duplicates(subset=['x_coord_right'], keep='first')
+    print(df_dist)
     
     # isolate coordinates of mutations
     muts = np.array(df_dist[df_dist.columns[2:5]])
@@ -116,6 +118,7 @@ def mean_dist(prots):
     """
     # get pairwise distances of all rows
     dists_prots = euclidean_distances(prots, prots)
+    #print(dists_prots)
     prots_vec = np.mean(dists_prots, axis=1)
     
     Y = dists_prots
@@ -154,6 +157,8 @@ def run_permutation(muts_df, df, emp_risk, emp_prot, num_runs):
 
     #x = muts_df[[2:5]].to_numpy()
     x = muts_df.iloc[:,[2,3,4]].to_numpy()
+    print(x.shape)
+    print(len_tots)
     for i in range(num_runs):
         np.random.shuffle(x)
         

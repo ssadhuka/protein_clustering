@@ -15,9 +15,11 @@ sys.path.append('../Initial_Tasks')
 import fix_permutations as tests
 import argparse
 
+pd.set_option('display.max_columns', None)
+
 
 def run_test(prot_dir, protein, data):
-        results_df = pd.DataFrame(columns=['gene_name', 'uniprot_ID', 'Mann-Whitney p-val', 'permutation risk', 'permutation prot'])
+        results_df = pd.DataFrame(columns=['gene_name', 'uniprot_ID', 'permutation risk', 'permutation prot'])
         file_repo = 'SWISS-MODEL_Repository/' + prot_dir + '/swissmodel/'
         if os.path.isdir(file_repo):
                 try:
@@ -41,17 +43,20 @@ def run_test(prot_dir, protein, data):
                         protein_spec_df.to_csv(write_to_dir, header=None, index=None, sep='\t')
                         protein_df = pd.read_csv(write_to_dir, header = None, sep="\t")
                         muts_df = tests.make_dataframe(df, protein_df, sequence) 
+                        
+                        print(muts_df)
+                        
                         if not (muts_df[muts_df['score'] > 0].empty or muts_df[muts_df['score'] < 0].empty): 
                                 risk = tests.get_dist_vec(muts_df, True)
                                 prot = tests.get_dist_vec(muts_df, False)
                         
-                                mw = tests.mannwhitneyu(risk, prot)
-                                print(mw.pvalue)
+                                #mw = tests.mannwhitneyu(risk, prot)
+                                #print(mw.pvalue)
                         
                                 perm = tests.run_permutation(muts_df, df, np.mean(risk), np.mean(prot), 1000)
                                 print(perm)
                         
-                                new_row = {'gene_name': gene_name, 'uniprot_ID': uniprot_ID, 'Mann-Whitney p-val': mw.pvalue, "permutation risk": perm[0], "permutation prot": perm[1]}
+                                new_row = {'gene_name': gene_name, 'uniprot_ID': uniprot_ID, "permutation risk": perm[0], "permutation prot": perm[1]}
                                 results_df.append(new_row, ignore_index=True)
                         
                         out_csv = 'parallelized/' + str(protein) + '-pval.csv'
@@ -62,12 +67,12 @@ def run_test(prot_dir, protein, data):
                         pass
             
 def main():
-        parser = argparse.ArgumentParser(description='Get a uniprot ID.')
-        parser.add_argument("--uniprot")
+        #parser = argparse.ArgumentParser(description='Get a uniprot ID.')
+        #parser.add_argument("--uniprot")
 
-        args = vars(parser.parse_args())
-        prot = args['uniprot']
-        prot_dir = prot[0:2] + '/' + prot[2:4] + '/' + prot[4:6]
+        #args = vars(parser.parse_args())
+        #prot = args['uniprot']
+        #prot_dir = prot[0:2] + '/' + prot[2:4] + '/' + prot[4:6]
     
         #print(os.getcwd())
         #os.chdir('/home/unix/ssadhuka/protein_clusters/Scale_Up')
@@ -81,8 +86,8 @@ def main():
         data = pd.merge(data, lookup, on='gene')
     
         data['uniprot_repo'] = data['uniprot'].astype(str).str[0:2] + '/' + data['uniprot'].astype(str).str[2:4] + '/' + data['uniprot'].astype(str).str[4:6]
-        # prot_dir = 'Q0/11/13'
-        # prot = 'Q01113'
+        prot_dir = 'Q0/11/13'
+        prot = 'Q01113'
         run_test(prot_dir, prot, data)
         #proteins = set(data['uniprot_repo'])
     

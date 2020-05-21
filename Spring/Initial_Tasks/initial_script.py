@@ -34,7 +34,7 @@ def make_dataframe(df, data, sequence):
     data = data[data['residue_number'].astype(int).isin(list(set(df['residue_number'])))]
     data['residue_name_convert'] = data[0].str.strip().str[2:3]
     
-    print(data)
+    print(list(data.columns))
     
     # get x, y, z coords of each residue as mean coordinate of all atoms making up residue
     for i in ['x', 'y', 'z']:
