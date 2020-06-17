@@ -14,7 +14,7 @@ from scipy import stats
 import matplotlib.pyplot as plt
 import sys
 from collections import Counter
-
+pd.set_option('display.max_rows', 150)
 
 class ResidueClustering(object):
     
@@ -106,27 +106,29 @@ class ResidueClustering(object):
             vec: a vector of the average distance of each mutation of a specific type (risk or protective) to all other mutations
         """
         if risk:
-            df_dist = self.muts_df[self.muts_df['score'] < 0] 
+            prob_vec = self.prob_vec
         else:
-            df_dist = self.muts_df[self.muts_df['score'] > 0]
+            prob_vec = 1 - self.prob_vec
         
-        df_dist = df_dist.drop_duplicates(subset=['x_coord_right', 'y_coord_right', 'z_coord_right'], keep='first')
-       
+        df_dist = self.muts_df.drop_duplicates(subset=['x_coord_right', 'y_coord_right', 'z_coord_right'], keep='first')
+        
         muts = np.array(df_dist[df_dist.columns[2:5]])
+        #print(muts)
         X = euclidean_distances(muts, muts)
         
         if probability:
-            prob_mat = np.outer(self.prob_vec, self.prob_vec)
+            prob_mat = np.outer(prob_vec, prob_vec)
             X = np.multiply(X, prob_mat)
         
         if local_distance:
             X = -np.exp(X)/(2*t**2)
         
         X = X[~np.eye(X.shape[0],dtype=bool)].reshape(X.shape[0],-1)
-        if risk:
-            self.emp_risk = round(np.mean(X), 3)
-        else:
-            self.emp_prot = round(np.mean(X), 3)
+        
+        if risk and probability: self.emp_risk = round(np.sum(X)/np.sum(prob_mat))
+        if risk and not probability: self.emp_risk = round(np.mean(X), 3)
+        if not risk and probability: self.emp_prot = round(np.sum(X)/np.sum(prob_mat), 3)
+        if not risk and not probability: self.emp_prot = round(np.mean(X), 3)
             
     
     def mean_dist(self, prots, local_distance, t=0):
@@ -154,6 +156,7 @@ class ResidueClustering(object):
     
     def prob_mean_dist(self, prots, local_distance, prob_vec, t=0):
         # get pairwise distances of all rows
+        #print(prots)
         X = euclidean_distances(prots, prots)
         prob_mat = np.outer(prob_vec, prob_vec)
         X = np.multiply(X, prob_mat)
@@ -162,7 +165,7 @@ class ResidueClustering(object):
             X = -np.exp(X)/(2*t**2)
         
         X = X[~np.eye(X.shape[0],dtype=bool)].reshape(X.shape[0],-1)
-        return(round(np.mean(X), 3))
+        return(round(np.sum(X)/np.sum(prob_mat), 3))
     
     
     def make_stratum(self, k, probability):
@@ -278,53 +281,68 @@ class ResidueClustering(object):
         #emp_risk = mean_dist(risks)
         
         for i in range(num_runs):
+            
             #np.random.shuffle(x)
-            x = self.stratified_permutation(self.all_pos_df, self.muts_df)
+            x = self.stratified_permutation(probability=probability)
             #x = muts_df
             if probability:
                 prob_vec_risk = self.get_prob_vec(x, risk=True)
                 prob_vec_prot = self.get_prob_vec(x, risk=False)
                 dist_prots.append(self.prob_mean_dist(x, local_distance, prob_vec_prot, t=t))
                 dist_risks.append(self.prob_mean_dist(x, local_distance, prob_vec_risk, t=t))
-             
+                 
             else:    
                 x_prots = x[x['score'] > 0].iloc[:, [0,1,2]].to_numpy()
                 x_risks = x[x['score'] < 0].iloc[:, [0,1,2]].to_numpy()
-                
-                dist_prots.append(self.mean_dist(x_prots, local_distance, probability, t=t))
-                dist_risks.append(self.mean_dist(x_risks, local_distance, probability, t=t))
-            #prots = x[0:len_prots,:]
-            #prots = np.unique(prots, axis=0)
-            #dist_prots.append(mean_dist(prots))
-           
-            #risks = x[len_prots:len_tots,:]
-            #risks = np.unique(risks, axis=0)
-            #dist_risks.append(mean_dist(risks))
+                    
+                dist_prots.append(self.mean_dist(x_prots, local_distance, probability))
+                dist_risks.append(self.mean_dist(x_risks, local_distance, probability))
+                #prots = x[0:len_prots,:]
+                #prots = np.unique(prots, axis=0)
+                #dist_prots.append(mean_dist(prots))
+               
+                #risks = x[len_prots:len_tots,:]
+                #risks = np.unique(risks, axis=0)
+                #dist_risks.append(mean_dist(risks))
         
-        #print(x)
+        #print(np.array(self.muts_df['risk_prob']))
         dist_risks.append(self.emp_risk)
         dist_prots.append(self.emp_prot)
+        #print(prob_vec_prot)
+        #print(dist_prots)
 
         ret1 = stats.percentileofscore(dist_risks, self.emp_risk, kind='mean')
         ret2 = stats.percentileofscore(dist_prots, self.emp_prot, kind='mean')
-        if (ret1 < 5 or ret2 < 5) and trials==0:
-                ret = self.run_permutation(5000, local_distance, probability, trials=1, t=t)
-                ret1 = ret[0]
-                ret2 = ret[1]
-        elif (ret1 < 0.5 or ret2 < 0.5) and trials==1:
-                ret = self.run_permutation(50000, local_distance, probability, trials=2, t=t)
-                ret1 = ret[0]
-                ret2 = ret[1]
+        #if (ret1 < 5 or ret2 < 5) and trials==0:
+        #        print(ret1, ret2)
+        #        ret = self.run_permutation(5000, local_distance, probability, trials=1, t=t)
+        #        ret1 = ret[0]
+        #        ret2 = ret[1]
+        #elif (ret1 < 0.5 or ret2 < 0.5) and trials==1:
+        #        ret = self.run_permutation(50000, local_distance, probability, trials=2, t=t)
+        #        ret1 = ret[0]
+        #        ret2 = ret[1]
         
         return(ret1, ret2)
         
+    
     def execute(self, local_distance=False, probability=False, fix_residues=False, t=0):
         if fix_residues:
             self.all_pos_df = self.muts_df
         
-        rets = self.run_permutation(500, local_distance=local_distance, probability=probability, t=t)
-        ret1 = rets[0]
-        ret2 = rets[1]
+        #all_pos_df = self.make_box(all_pos_df, muts_df)
+        
+        if not (self.var_prot < 2 or self.var_risk < 2):
+            self.set_dist_vec(local_distance=local_distance, probability=probability, risk=True, t=t)
+            self.set_dist_vec(local_distance=local_distance, probability=probability, risk=False, t=t)
+            print(self.emp_risk)
+            
+            rets = self.run_permutation(100, local_distance=local_distance, probability=probability, t=t)
+            ret1 = rets[0]
+            ret2 = rets[1]
+        else:
+            ret1 = 'EMPTY'
+            ret2 = 'EMPTY'
         
         return(ret1, ret2)
         
