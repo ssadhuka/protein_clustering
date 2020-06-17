@@ -112,7 +112,14 @@ class ResidueClustering(object):
         
         df_dist = self.muts_df.drop_duplicates(subset=['x_coord_right', 'y_coord_right', 'z_coord_right'], keep='first')
         
+        if not probability:
+            if risk:
+                df_dist = self.muts_df[self.muts_df['score'] < 0] 
+            else:
+                df_dist = self.muts_df[self.muts_df['score'] > 0]
+            
         muts = np.array(df_dist[df_dist.columns[2:5]])
+        print(muts)
         #print(muts)
         X = euclidean_distances(muts, muts)
         
@@ -125,10 +132,10 @@ class ResidueClustering(object):
         
         X = X[~np.eye(X.shape[0],dtype=bool)].reshape(X.shape[0],-1)
         
-        if risk and probability: self.emp_risk = round(np.sum(X)/np.sum(prob_mat))
-        if risk and not probability: self.emp_risk = round(np.mean(X), 3)
-        if not risk and probability: self.emp_prot = round(np.sum(X)/np.sum(prob_mat), 3)
-        if not risk and not probability: self.emp_prot = round(np.mean(X), 3)
+        if (risk and probability): self.emp_risk = round(np.sum(X)/np.sum(prob_mat))
+        if (risk and not probability): self.emp_risk = round(np.mean(X), 3)
+        if (not risk and probability): self.emp_prot = round(np.sum(X)/np.sum(prob_mat), 3)
+        if (not risk and not probability): self.emp_prot = round(np.mean(X), 3)
             
     
     def mean_dist(self, prots, local_distance, t=0):
@@ -288,6 +295,7 @@ class ResidueClustering(object):
             if probability:
                 prob_vec_risk = self.get_prob_vec(x, risk=True)
                 prob_vec_prot = self.get_prob_vec(x, risk=False)
+                x = x.iloc[:, [0,1,2]].to_numpy()
                 dist_prots.append(self.prob_mean_dist(x, local_distance, prob_vec_prot, t=t))
                 dist_risks.append(self.prob_mean_dist(x, local_distance, prob_vec_risk, t=t))
                  
@@ -309,7 +317,7 @@ class ResidueClustering(object):
         dist_risks.append(self.emp_risk)
         dist_prots.append(self.emp_prot)
         #print(prob_vec_prot)
-        #print(dist_prots)
+        #print(dist_risks)
 
         ret1 = stats.percentileofscore(dist_risks, self.emp_risk, kind='mean')
         ret2 = stats.percentileofscore(dist_prots, self.emp_prot, kind='mean')
@@ -329,6 +337,8 @@ class ResidueClustering(object):
     def execute(self, local_distance=False, probability=False, fix_residues=False, t=0):
         if fix_residues:
             self.all_pos_df = self.muts_df
+        #print(self.all_pos_df.head(100))
+        #print(self.muts_df)
         
         #all_pos_df = self.make_box(all_pos_df, muts_df)
         
@@ -336,6 +346,7 @@ class ResidueClustering(object):
             self.set_dist_vec(local_distance=local_distance, probability=probability, risk=True, t=t)
             self.set_dist_vec(local_distance=local_distance, probability=probability, risk=False, t=t)
             print(self.emp_risk)
+
             
             rets = self.run_permutation(100, local_distance=local_distance, probability=probability, t=t)
             ret1 = rets[0]
