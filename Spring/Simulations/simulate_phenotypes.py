@@ -6,7 +6,7 @@ Created on Tue Jul  7 17:45:33 2020
 @author: shuvomsadhuka
 """
 import numpy as np
-from scipy.special import logit, expit
+from scipy.special import expit
 from scipy.linalg import sqrtm
 from scipy.stats import chi2
 from sklearn.linear_model import LogisticRegression
@@ -33,6 +33,7 @@ class SimP(object):
     
     def make_mafs(self):
         self.maf = np.random.uniform(0, 0.5, size=self.num_mutations)
+        self.combined_maf = np.mean(self.maf)
         
     def make_pis_and_gammas(self, pi, gamma, pct_causal):
         indices = np.random.choice(np.arange(len(pi)), replace=False, size=int(len(pi) * (1 - pct_causal)))

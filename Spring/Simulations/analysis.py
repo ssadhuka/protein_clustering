@@ -19,10 +19,8 @@ def type1(df, test, alpha):
     return(type1)
 
 
-
 def make_fisher(df):
     df['p_gamma'][df['p_gamma'] == 0] = 0.0000000001
-    print(df['p_gamma'][61])
     df['fisher'] = -2 * np.log(df['p_gamma']) - 2 * np.log(df['p_pi'])
     return(df)
 
@@ -33,14 +31,14 @@ def make_tippett(df):
 
 
 def main():
-    df = pd.read_csv('power/nonzero_gamma_only/100muts_500indiv_gamma_mixed_1.csv')
+    df = pd.read_csv('power/both_nonzero/100muts_1000indiv_both_nonzero.csv')
     df = make_fisher(df)
     df = make_tippett(df)
     
-    type1_fisher = type1(df, 'fisher', 0.001)
-    type1_tippett = type1(df, 'tippett', 0.001)
-    type1_pi = type1(df, 'p_pi', 0.001)
-    type1_gamma = type1(df, 'p_gamma', 0.001)
+    type1_fisher = type1(df, 'fisher', 0.01)
+    type1_tippett = type1(df, 'tippett', 0.01)
+    type1_pi = type1(df, 'p_pi', 0.01)
+    type1_gamma = type1(df, 'p_gamma', 0.01)
     print(type1_pi)
     print(type1_gamma)
     print(type1_fisher)
