@@ -22,8 +22,8 @@ def main(var_ratio, pi_sum_ratio, num_muts, num_indivs):
     protein_structure = select_mutations(protein_structure, num_muts)
     
     dists = distances_pairwise(protein_structure)
-    #distance_kernel = covariance_matrix(dists, 6)
-    distance_kernel = np.eye(100)
+    distance_kernel = covariance_matrix(dists, 6)
+    #distance_kernel = np.eye(100)
     
     p_pis = []
     p_gammas = []
@@ -32,7 +32,7 @@ def main(var_ratio, pi_sum_ratio, num_muts, num_indivs):
     prevalence = np.exp(logit(alpha[0]))
     
     
-    for i in range(500):
+    for i in range(5):
         try:
             #gamma = np.random.normal(0, np.sqrt(tau_sq), size=100)
             #pi_fixed = [0]
@@ -77,7 +77,7 @@ def main(var_ratio, pi_sum_ratio, num_muts, num_indivs):
     #out_dir = 'power/both_nonzero/var_ratio_' + str(var_ratio) + '_pi_ratio_' + str(pi_sum_ratio) + '/'
     #out_dir += str(num_muts) + 'muts_' + str(num_indivs) + 'indiv.csv'
     out_dir = 'type1_error/type1sims_1000indiv_100muts.csv'
-    df.to_csv(out_dir)
+    #df.to_csv(out_dir)
     
 if __name__ == '__main__':
     #var_ratios = [(i+1)*0.01 for i in range(5)]

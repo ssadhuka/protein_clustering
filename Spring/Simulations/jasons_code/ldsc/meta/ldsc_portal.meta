@@ -1,0 +1,81 @@
+#must reference the config file used
+!config /home/unix/flannick/lap/projects/ldsc/config/ldsc.cfg
+
+!title LDSC
+
+#Paths to output directories
+#------
+#here are where the keys are defined
+#unix_out_dir and log_dir must be defined. Usually I just define base_dir
+!key base_dir /home/unix/flannick/links/portal/ldsc
+!key unix_out_dir $base_dir/out
+!key log_dir $base_dir/log
+!key raw_dir $base_dir/raw
+!key default_umask 002
+#this allows you to access pipeline output files
+#usually I run
+!key web_out_dir http://iwww.broadinstitute.org/~flannick/ldsc_portal_out
+
+#The project
+#------------
+
+portal_raw_dir prop scalar 
+
+#always define a default project
+#declare it by <instance name> class <class defined in config file>
+euro class project
+euro disp European
+euro ancestry European
+euro dbi_configuration /home/unix/flannick/lap/projects/ldsc/bin/aws_dev.dbi
+euro skip_dataset {GWAS_DIAMANTE_GRS_dv1.1,GWAS_BBJ_ea_dv1.1,GWAS_IBDGenetics_eu_CrdSet_dv1.1,GWAS_MAGIC_dv3.1}
+euro portal_raw_dir /home/unix/flannick/links/portal/ldsc/raw
+
+euro ref_ld_chr @portal_raw_dir/1000G_EUR_Phase3_baseline/baseline.
+euro dynamic_cts multi_tissue_gene_expr
+euro dynamic_ref_ld_chr_cts @portal_raw_dir/Multi_tissue_gene_expr.ldcts
+
+mixed class project
+mixed disp Mixed
+mixed ancestry Mixed
+mixed dbi_configuration /home/unix/flannick/lap/projects/ldsc/bin/aws_dev.dbi
+mixed skip_dataset {GWAS_DIAMANTE_GRS_dv1.1,GWAS_BBJ_ea_dv1.1,GWAS_IBDGenetics_eu_CrdSet_dv1.1,GWAS_MAGIC_dv3.1}
+mixed skip_dataset WHR,GWAS_GIANT_dv3.1
+mixed portal_raw_dir /home/unix/flannick/links/portal/ldsc/raw
+
+mixed ref_ld_chr @portal_raw_dir/1000G_EUR_Phase3_baseline/baseline.
+mixed dynamic_cts multi_tissue_gene_expr
+mixed dynamic_ref_ld_chr_cts @portal_raw_dir/Multi_tissue_gene_expr.ldcts
+
+#traits have parents so assign them to an instance in the parent class (project)
+chrom{1..22} class chrom
+chrom{1..22} parent project
+chrom{1..22} chrom_num {1..22}
+
+raw_dir prop scalar
+project raw_dir /humgen/diabetes2/users/lthakur/lap_test/ldsc/raw
+
+sumstats_raw_dir prop scalar
+project sumstats_raw_dir /humgen/diabetes2/users/lthakur/LDSC/ldsc/sumstats
+
+monogenic_diabetes class gene_set
+monogenic_diabetes parent project
+monogenic_diabetes gene_set_gene_set_list_file @raw_dir/monogenic_gene_set/MODY.txt
+
+gene_set parent project
+
+gene_set_chrom{1..22} class gene_set_chrom
+gene_set_chrom{1..22} parent gene_set
+gene_set_chrom{1..22} chrom_num {1..22}
+gene_set_chrom{1..22} consistent chrom{1..22}
+
+project project_gene_map_file /humgen/diabetes2/users/lthakur/LDSC/ldsc/flannick_files/55k.gencode.gene.map
+project project_gene_coord_file /humgen/diabetes2/users/lthakur/LDSC/ldsc/ENSG_coord.txt
+
+chrom{1..22} chrom_bim_file /humgen/diabetes2/users/lthakur/LDSC/ldsc/1000G_EUR_Phase3_plink/1000G.EUR.QC.{1..22}.bim
+chrom{1..22} chrom_fam_file /humgen/diabetes2/users/lthakur/LDSC/ldsc/1000G_EUR_Phase3_plink/1000G.EUR.QC.{1..22}.fam
+chrom{1..22} chrom_bed_file /humgen/diabetes2/users/lthakur/LDSC/ldsc/1000G_EUR_Phase3_plink/1000G.EUR.QC.{1..22}.bed
+chrom{1..22} chrom_frq_file /humgen/diabetes2/users/lthakur/LDSC/ldsc/1000G_Phase3_frq/1000G.EUR.QC.{1..22}.frq
+chrom{1..22} chrom_w_l2_ldscore_gz_file /humgen/diabetes2/users/lthakur/LDSC/ldsc/1000G_Phase3_weights_hm3_no_MHC/weights.hm3_noMHC.{1..22}.l2.ldscore.gz
+chrom{1..22} chrom_snps_file /humgen/diabetes2/users/lthakur/LDSC/ldsc/hapmap3_snps/hm.{1..22}.snp
+
+project project_hm3_snplist_file /humgen/diabetes2/users/lthakur/lap_test/ldsc/raw/w_hm3.snplist

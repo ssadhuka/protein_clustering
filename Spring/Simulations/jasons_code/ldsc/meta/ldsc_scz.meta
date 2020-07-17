@@ -1,0 +1,106 @@
+#must reference the config file used
+!config /humgen/diabetes2/users/lthakur/lap_test/ldsc/config/ldsc.cfg
+
+!title LDSC
+
+#Paths to output directories
+#------
+#here are where the keys are defined
+#unix_out_dir and log_dir must be defined. Usually I just define base_dir
+!key base_dir /humgen/diabetes2/users/lthakur/lap_test/ldsc
+!key unix_out_dir $base_dir/out
+!key log_dir $base_dir/log
+!key raw_dir $base_dir/raw
+!key default_umask 002
+#this allows you to access pipeline output files
+#usually I run
+#ln -s $unix_out_dir /humgen/diabetes2/users/pdornbos/lap_test/qq_filter/out  ~flannick/private_html/qq_filter_out
+!key web_out_dir http://iwww.broadinstitute.org/~flannick/ldsc_out
+
+#The project
+#------------
+
+#always define a default project
+#declare it by <instance name> class <class defined in config file>
+euro class project
+euro disp Version 1
+euro portal_raw_dir /home/unix/flannick/links/portal/ldsc/raw
+
+#traits have parents so assign them to an instance in the parent class (project)
+chrom{1..22} class chrom
+chrom{1..22} parent euro
+chrom{1..22} chrom_num {1..22}
+
+sumstats_raw_dir prop scalar
+project sumstats_raw_dir /humgen/diabetes2/users/lthakur/LDSC/ldsc/sumstats
+
+scz class trait
+scz trait_index t2d
+scz parent euro
+scz disp SCZ
+scz trait_initial_sumstats_file @sumstats_raw_dir/SCZ2.sumstats.gz
+
+#t2d class trait
+#t2d trait_index t2d
+#t2d parent euro
+#t2d disp T2D
+#t2d trait_initial_sumstats_file @sumstats_raw_dir/disease_T2D.sumstats.gz
+
+#cad class trait
+#cad trait_index cad
+#cad parent euro
+#cad disp CAD
+#cad trait_initial_sumstats_file @sumstats_raw_dir/disease_CARDIOVASCULAR.sumstats.gz
+
+#!include add_traits.meta
+
+#wc -l komp_geneSet/*.txt  > files
+#cat files | perl -lne 's/^\s*//; s/ /\t/; @F = split("\t"); if ($F[0] > -1) {$a = $F[1];  $a =~ s/[\s,'\''\(\)]+/_/g; $F[1]="\"$F[1]\""; push @F, $a; print "mv $F[1] $F[2]"}' > mv_cmds.sh
+
+raw_dir prop scalar
+project raw_dir /humgen/diabetes2/users/lthakur/lap_test/ldsc/raw
+
+##wc -l komp_geneSet/*.human.txt | sed 's;komp_geneSet/;;' | sed 's;.human.txt;;' | awk '$2 != "total" && $1 >= 10 {print "komp_"$2,"class","gene_set"; print "komp_"$2,"parent","euro"; print "komp_"$2,"gene_set_gene_set_list_file","@raw_dir/komp_geneSet/"$2".human.txt"}' > ~/lap/projects/ldsc/meta/komp_gene_sets.meta 
+!include komp_gene_sets.meta
+
+monogenic_diabetes class gene_set
+monogenic_diabetes parent euro
+monogenic_diabetes gene_set_gene_set_list_file @raw_dir/monogenic_gene_set/MODY.txt
+
+monogenic_cvd class gene_set
+monogenic_cvd parent euro
+monogenic_cvd gene_set_gene_set_list_file @raw_dir/monogenic_gene_set/Cardiovascular_Disease.txt
+
+gene_set parent euro
+
+gene_set_chrom{1..22} class gene_set_chrom
+gene_set_chrom{1..22} parent gene_set
+gene_set_chrom{1..22} chrom_num {1..22}
+gene_set_chrom{1..22} consistent chrom{1..22}
+
+ldsc_scz class ldsc_trait
+ldsc_scz trait_index scz
+ldsc_scz consistent scz
+ldsc_trait parent gene_set
+
+#ldsc_t2d class ldsc_trait
+#ldsc_t2d trait_index t2d
+#ldsc_t2d consistent t2d
+#ldsc_trait parent gene_set
+
+#ldsc_{t2d,cad} class ldsc_trait
+#ldsc_{t2d,cad} trait_index {t2d,cad}
+#ldsc_{t2d,cad} consistent {t2d,cad}
+#ldsc_trait parent gene_set
+
+project project_gene_map_file /humgen/diabetes2/users/lthakur/LDSC/ldsc/flannick_files/55k.gencode.gene.map
+project project_gene_coord_file /humgen/diabetes2/users/lthakur/LDSC/ldsc/ENSG_coord.txt
+
+chrom{1..22} chrom_bim_file /humgen/diabetes2/users/lthakur/LDSC/ldsc/1000G_EUR_Phase3_plink/1000G.EUR.QC.{1..22}.bim
+chrom{1..22} chrom_fam_file /humgen/diabetes2/users/lthakur/LDSC/ldsc/1000G_EUR_Phase3_plink/1000G.EUR.QC.{1..22}.fam
+chrom{1..22} chrom_bed_file /humgen/diabetes2/users/lthakur/LDSC/ldsc/1000G_EUR_Phase3_plink/1000G.EUR.QC.{1..22}.bed
+chrom{1..22} chrom_frq_file /humgen/diabetes2/users/lthakur/LDSC/ldsc/1000G_Phase3_frq/1000G.EUR.QC.{1..22}.frq
+chrom{1..22} chrom_w_l2_ldscore_gz_file /humgen/diabetes2/users/lthakur/LDSC/ldsc/1000G_Phase3_weights_hm3_no_MHC/weights.hm3_noMHC.{1..22}.l2.ldscore.gz
+chrom{1..22} chrom_snps_file /humgen/diabetes2/users/lthakur/LDSC/ldsc/hapmap3_snps/hm.{1..22}.snp
+
+euro project_hm3_snplist_file /humgen/diabetes2/users/lthakur/lap_test/ldsc/raw/w_hm3.snplist

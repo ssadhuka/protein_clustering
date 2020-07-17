@@ -1,0 +1,5 @@
+user	diguser
+database	digkb
+host_url	db-dev-seventeen-aws.cxrzznxifeib.us-east-1.rds.amazonaws.com
+db_pswd		type2diabetes
+

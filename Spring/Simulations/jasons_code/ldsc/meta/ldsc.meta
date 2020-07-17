@@ -1,0 +1,173 @@
+#must reference the config file used
+!config /humgen/diabetes2/users/lthakur/lap_test/ldsc/config/ldsc.cfg
+
+!title LDSC
+
+#Paths to output directories
+#------
+#here are where the keys are defined
+#unix_out_dir and log_dir must be defined. Usually I just define base_dir
+!key base_dir /humgen/diabetes2/users/lthakur/lap_test/ldsc
+!key unix_out_dir $base_dir/out
+!key log_dir $base_dir/log
+!key raw_dir $base_dir/raw
+!key default_umask 002
+#this allows you to access pipeline output files
+#usually I run
+#ln -s $unix_out_dir /humgen/diabetes2/users/pdornbos/lap_test/qq_filter/out  ~flannick/private_html/qq_filter_out
+!key web_out_dir http://iwww.broadinstitute.org/~flannick/ldsc_out
+
+#The project
+#------------
+
+#always define a default project
+#declare it by <instance name> class <class defined in config file>
+euro class project
+euro disp Version 1
+#euro portal_raw_dir /home/unix/flannick/links/portal/ldsc/raw
+
+#traits have parents so assign them to an instance in the parent class (project)
+chrom{1..22} class chrom
+chrom{1..22} parent euro
+chrom{1..22} chrom_num {1..22}
+
+#More paths
+#----------
+
+raw_dir prop scalar
+project raw_dir /humgen/diabetes2/users/lthakur/lap_test/ldsc/raw
+
+ldsc_dir prop scalar
+project ldsc_dir /humgen/diabetes2/users/lthakur/LDSC/ldsc
+
+sumstats_raw_dir prop scalar
+project sumstats_raw_dir @ldsc_dir/sumstats
+
+#More paths
+#----------
+
+t2d class trait
+t2d trait_index t2d
+t2d parent euro
+t2d disp T2D
+t2d trait_initial_sumstats_file @sumstats_raw_dir/disease_T2D.sumstats.gz
+
+scz class trait
+scz trait_index scz
+scz parent euro
+scz disp SCZ
+scz trait_initial_sumstats_file @sumstats_raw_dir/SCZ_2.sumstats.gz
+
+#cad class trait
+#cad trait_index cad
+#cad parent euro
+#cad disp CAD
+#cad trait_initial_sumstats_file @sumstats_raw_dir/disease_CARDIOVASCULAR.sumstats.gz
+
+#!include add_traits.meta
+
+#TO MAP GENE NAMES
+#cat /humgen/diabetes2/users/lthakur/lap_test/ldsc/raw/mouse.human.unique.gene.map /path/to/one.mouse.gene.per.line.txt | awk 'NF == 2 {m[$1]=$2} NF == 1 && m[$1] {print m[$1]}' > /path/to/output/list.txt
+
+
+#GENE SETS
+
+#MsigDB subset (CP)
+
+#wc -l /humgen/diabetes2/users/lthakur/lap_test/ldsc/raw/cp_gene_sets/*.txt | sed 's;/humgen/diabetes2/users/lthakur/lap_test/ldsc/raw/cp_gene_sets/;;' | sed 's;.txt;;' | egrep -v 'REACTOME_METALLOTHIONEINS_BIND_METALS|REACTOME_FORMATION_OF_ATP_BY_CHEMIOSMOTIC_COUPLING' | awk '$2 != "total" && $1 >= 10 {print $2,"class","gene_set"; print $2,"parent","euro"; print $2,"gene_set_gene_set_list_file","@raw_dir/cp_gene_sets/"$2".txt"}' > /home/unix/flannick/lap/projects/ldsc/meta/cp_gene_sets.meta
+
+!include cp_gene_sets.meta
+
+#Remaining MsigDB
+
+#ls -1 ../raw/cp_gene_sets/ > cp.txt
+#ls -1 ../raw/msigdb_genesets > msigdb.txt
+#for file in /humgen/diabetes2/users/lthakur/lap_test/ldsc/raw/msigdb_genesets/*; do if [[ `echo $file | sed 's;.*/;;' | sed 's/.gz//' | fgrep -f - cp.txt | wc -l` -eq 0 ]]; then if [[ `cat $file | wc -l` -gt 9 ]]; then echo $file | sed 's;.*/;;' | sed 's/.gz//' | awk '{name="msigdb_"$1; print name,"class","gene_set"; print name,"parent","euro"; print name,"gene_set_gene_set_list_file","@raw_dir/msigdb_genesets/"$1".txt"}'; fi; fi; done > ~/lap/projects/ldsc/meta/msigdb_gene_sets.meta 
+
+!include msigdb_gene_sets.meta 
+
+#Mouse gene sets
+
+#First, get files mapping mouse to human genes
+#perl ~flannick/lap/projects/common/smart_join.pl --in-delim $'\t' --exec "cut -f2,21 HGNC_homologene.rpt | awk -v OFS=\"\t\" '\$2 != \"null\" {split(\$2,a,\"|\"); for (v in a) {print \$1,a[v]}}'" --exec "cut -f1,2 gene_with_protein_product.txt" --col 1,2 --col 2,1 --extra 2 --fill 2 --multiple 1 | cut -f2,3 > mouse.human.gene.map
+#sj -e "cut -f1 mouse.human.gene.map | sort | uniq -u" -f mouse.human.gene.map --multiple 2 --extra 2 > mouse.human.unique.gene.map
+#
+
+#3 different queries
+#1. Nature paper
+#2. Lokendra (used for LDSC)
+#3. New query
+#<query model="genomic" view="Gene.primaryIdentifier Gene.symbol Gene.organism.name Gene.homologues.homologue.primaryIdentifier Gene.homologues.homologue.symbol Gene.homologues.homologue.organism.name Gene.alleles.ontologyAnnotations.ontologyTerm.name Gene.alleles.ontologyAnnotations.ontologyTerm.identifier Gene.alleles.ontologyAnnotations.qualifier" sortOrder="Gene.primaryIdentifier ASC" constraintLogic="A and B and C and D" ><constraint path="Gene.mgiType" op="=" value="protein coding gene" code="A" /><constraint path="Gene.homologues.homologue.organism.name" op="=" value="Homo sapiens" code="B" /><constraint path="Gene.alleles.alleleAttributes.name" op="=" value="Null/knockout" code="C" /><constraint path="Gene.alleles.ontologyAnnotations" op="IS NOT NULL" code="D" /></query> 
+#4. New query with KO filter removed
+
+#Lokendra is missing alleles as part of compound knockouts
+#Re-run new query, and if results are way worse, consider excluding compound alleles
+
+
+#cat mouse_KO_phenotypes.txt  | cut -f2,5 | sed 's/ /_/g' | sed 's;/;_;g' | sed 's/(//g' | sed 's/)//g' | sed "s;';_;g" | sed 's;";;g' | sed "s;';_;g" | sed "s;,;_;g" | tail -n+2 | sed 's/^/DATA\t/' | cat mouse.human.unique.gene.map - | awk -F"\t" -v OFS="\t" '$1 != "DATA" {m[$1]=$2} $1 == "DATA" {if (m[$2]) {print $3,m[$2]}}' | perl -ae 'system("echo $F[1] >> mp_geneSet/mp_$F[0].human.txt")'
+
+#cat mouse_mutation_phenotypes.txt  | cut -f2,7 | sed 's/ /_/g' | sed 's;/;_;g' | sed 's/(//g' | sed 's/)//g' | sed "s;';_;g" | sed 's;";;g' | sed "s;';_;g" | sed "s;,;_;g" | tail -n+2 | sed 's/^/DATA\t/' | cat mouse.human.unique.gene.map - | awk -F"\t" -v OFS="\t" '$1 != "DATA" {m[$1]=$2} $1 == "DATA" {if (m[$2]) {print $3,m[$2]}}' | sort -u | perl -ae 'system("echo $F[1] >> mp_geneSet/mp_$F[0].human.txt")'
+
+#wc -l mp_geneSet/*.human.txt | sed 's;mp_geneSet/;;' | sed 's;.human.txt;;' | awk '$2 != "total" && $1 >= 10 {print $2,"class","gene_set"; print $2,"parent","euro"; print $2,"gene_set_gene_set_list_file","@raw_dir/mp_geneSet/"$2".human.txt"}' > ~/lap/projects/ldsc/meta/mp_gene_sets.meta 
+
+!include mp_gene_sets.meta
+
+#Deprecated: Original KOMP data
+
+##wc -l komp_geneSet/*.human.txt | sed 's;komp_geneSet/;;' | sed 's;.human.txt;;' | awk '$2 != "total" && $1 >= 10 {print "komp_"$2,"class","gene_set"; print "komp_"$2,"parent","euro"; print "komp_"$2,"gene_set_gene_set_list_file","@raw_dir/komp_geneSet/"$2".human.txt"}' > ~/lap/projects/ldsc/meta/komp_gene_sets.meta 
+##!include komp_gene_sets.meta
+
+
+#OMIM
+#for file in *[\{\}\[\]\?]*.txt; do new_file=`echo $file | sed 's/?//g' | sed 's/\[//g' | sed 's/\]//g' | sed 's/{//g' | sed 's/}//g'`; mv "$file" "$new_file"; done
+
+
+
+#Manual sets
+
+monogenic_diabetes class gene_set
+monogenic_diabetes parent euro
+monogenic_diabetes gene_set_gene_set_list_file @raw_dir/monogenic_gene_set/Monogenic_Diabetes.txt
+
+monogenic_cvd class gene_set
+monogenic_cvd parent euro
+monogenic_cvd gene_set_gene_set_list_file @raw_dir/monogenic_gene_set/Cardiovascular_Disease.txt
+
+gene_set parent euro
+
+gene_set_chrom{1..22} class gene_set_chrom
+gene_set_chrom{1..22} parent gene_set
+gene_set_chrom{1..22} chrom_num {1..22}
+gene_set_chrom{1..22} consistent chrom{1..22}
+
+ldsc_t2d class ldsc_trait
+ldsc_t2d trait_index t2d
+ldsc_t2d consistent t2d
+
+ldsc_scz class ldsc_trait
+ldsc_scz trait_index scz
+ldsc_scz consistent scz
+
+ldsc_trait parent gene_set
+
+#ldsc_{t2d,cad} class ldsc_trait
+#ldsc_{t2d,cad} trait_index {t2d,cad}
+#ldsc_{t2d,cad} consistent {t2d,cad}
+#ldsc_trait parent gene_set
+
+project project_gene_map_file @ldsc_dir/flannick_files/55k.gencode.gene.map
+project project_gene_coord_file @ldsc_dir/ENSG_coord.txt
+
+chrom{1..22} chrom_bim_file @ldsc_dir/1000G_EUR_Phase3_plink/1000G.EUR.QC.{1..22}.bim
+chrom{1..22} chrom_fam_file @ldsc_dir/1000G_EUR_Phase3_plink/1000G.EUR.QC.{1..22}.fam
+chrom{1..22} chrom_bed_file @ldsc_dir/1000G_EUR_Phase3_plink/1000G.EUR.QC.{1..22}.bed
+chrom{1..22} chrom_frq_file @ldsc_dir/1000G_Phase3_frq/1000G.EUR.QC.{1..22}.frq
+chrom{1..22} chrom_w_l2_ldscore_gz_file @ldsc_dir/1000G_Phase3_weights_hm3_no_MHC/weights.hm3_noMHC.{1..22}.l2.ldscore.gz
+chrom{1..22} chrom_snps_file @ldsc_dir/hapmap3_snps/hm.{1..22}.snp
+
+chrom{1..22} chrom_baseline_annot_gz_file @raw_dir/baseline/baselineLD.{1..22}.annot.gz 
+
+#project project_all_genes_gene_list_file @raw_dir/mp.all_genes.txt
+#project project_all_genes_gene_list_file @raw_dir/exomes.all_genes.txt
+
+euro project_hm3_snplist_file @raw_dir/w_hm3.snplist
