@@ -18,10 +18,16 @@ import os
 
     
             
-def test_pi(X, y, genotypes, covariates, lr_alpha):
-    mu_hat = lr_alpha.predict_proba(X.T)[:,1]
-    sigma_hat = mu_hat * (1 - mu_hat)
-    D_hat = np.diag(sigma_hat)
+def test_pi(X, y, genotypes, covariates, lr_alpha, regression):
+    if regression == 'logistic':
+        mu_hat = lr_alpha.predict_proba(X.T)[:,1]
+        sigma_hat = mu_hat * (1 - mu_hat)
+        D_hat = np.diag(sigma_hat)
+    if regression == 'linear':
+        mu_hat = lr_alpha.predict(X.T)
+        sigma_hat = np.sum(np.square(y.flatten() - mu_hat.flatten()))/len(y.flatten())
+        D_hat = np.diag([sigma_hat for i in range(len(y.flatten()))])
+        
     U_pi = genotypes @ (y.flatten() - mu_hat.flatten())
     
     inner = (D_hat @ covariates.T) @ np.linalg.pinv(covariates @ D_hat @ covariates.T) @ (covariates @ D_hat)
@@ -33,15 +39,20 @@ def test_pi(X, y, genotypes, covariates, lr_alpha):
     return(1-chi2.cdf(U_pi_chi, len(U_pi_standardized)))
     
 
-def test_tau(X, y, genotypes, covariates, distance_kernel, lr_pi, temp_dir, out_dir):
-    mu_hat = lr_pi.predict_proba(X.T)[:,1]
-    sigma_hat = mu_hat * (1 - mu_hat)
-    D_hat = np.diag(sigma_hat)
+def test_tau(X, y, genotypes, covariates, distance_kernel, lr_pi, temp_dir, out_dir, regression):
+    if regression == 'logistic':
+        mu_hat = lr_pi.predict_proba(X.T)[:,1]
+        sigma_hat = mu_hat * (1 - mu_hat)
+        D_hat = np.diag(sigma_hat)
+    if regression == 'linear':
+        mu_hat = lr_pi.predict(X.T)
+        sigma_hat = np.sum(np.square(y.flatten() - mu_hat.flatten()))/len(y.flatten())
+        D_hat = np.diag([sigma_hat for i in range(len(y.flatten()))])
     
     kernel = genotypes.T @ distance_kernel @ genotypes
     S_tau_2 = (y.flatten() - mu_hat.flatten()).T @ kernel @ (y.flatten() - mu_hat.flatten())
     
-    def check_symmetric(a, tol=1e-5):
+    def check_symmetric(a, tol=1e-3):
         return np.all(np.abs(a-a.T) < tol)
     
     inner = np.linalg.pinv(X @ D_hat @ X.T)
@@ -49,7 +60,7 @@ def test_tau(X, y, genotypes, covariates, distance_kernel, lr_pi, temp_dir, out_
     
     P_hat_sqrt = sqrtm(P_hat)
     # pay attention to this line - do we need dist kernel in between?
-    mixture = P_hat_sqrt @ (genotypes.T @ genotypes) @ P_hat_sqrt
+    mixture = P_hat_sqrt @ (genotypes.T @ distance_kernel @ genotypes) @ P_hat_sqrt
     print(check_symmetric(mixture))
     
     # mixture should definitely be PSD because it can be factored as a matrix M * M.T
@@ -76,8 +87,8 @@ def test_tau(X, y, genotypes, covariates, distance_kernel, lr_pi, temp_dir, out_
         eig_ratio = w[i+1]/w[i]
         eigs_davies.append(w[i])
         i += 1
-            
     return(davies_approximation(S_tau_2, eigs_davies, temp_dir, out_dir))
+
     
 
 def fisher_procedure():
@@ -105,7 +116,6 @@ def davies_approximation(S_tau_2, eigs, temp_dir, out_dir):
     f = open(out_relative, 'r')
     p_gamma = f.readline()
     return(p_gamma)
-    
     
 
 

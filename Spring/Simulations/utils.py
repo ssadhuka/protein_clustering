@@ -7,6 +7,7 @@ Created on Fri Jul 10 15:35:53 2020
 """
 from sklearn.metrics.pairwise import euclidean_distances
 from sklearn.linear_model import LogisticRegression
+from sklearn.linear_model import LinearRegression
 import os
 import pandas as pd
 import numpy as np
@@ -32,7 +33,7 @@ def set_pi_and_tau(var_to_explain, pi_sum_ratio, comb_maf, eps=1):
     # and x/(x+y) = pi_sum_ratio, then rescale pi
     sum_pi_tau = var_to_explain/(1 - var_to_explain)
     unscaled_pi = sum_pi_tau * pi_sum_ratio
-    scaled_pi = unscaled_pi / (2 * (1 - comb_maf) * comb_maf)
+    scaled_pi = np.sqrt(unscaled_pi / (2 * (1 - comb_maf) * comb_maf))
     tau_sq = sum_pi_tau - unscaled_pi
     return(scaled_pi, tau_sq)
 
@@ -41,6 +42,12 @@ def run_logistic(X, y):
     logitr = LogisticRegression(penalty='none', fit_intercept=False)
     logitr.fit(X.T, y)
     return(logitr)
+
+
+def run_linear(X, y):
+    linear = LinearRegression( fit_intercept=False)
+    linear.fit(X.T, y)
+    return(linear)
 
 
 def make_protein_df(protein_id):

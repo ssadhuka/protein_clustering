@@ -31,24 +31,23 @@ def main(var_ratio, pi_sum_ratio, num_muts, num_indivs):
     alpha = [0.1, 0.5, 0.5]
     prevalence = np.exp(logit(alpha[0]))
     
-    
-    for i in range(5):
+    for i in range(250):
         try:
-            #gamma = np.random.normal(0, np.sqrt(tau_sq), size=100)
+            gamma = np.random.normal(0, np.sqrt(tau_sq), size=100)
             #pi_fixed = [0]
             #gamma = [0 for i in range(100)]
-            
-            #for i in range(100):
             simp = SimP(num_subjects=num_indivs, num_mutations=num_muts, pct_causal = 0.5, alpha=alpha, pi=[pi_fixed], 
                         gamma=gamma, 
                         Z_mat = np.ones((100,1)),
-                        dist_kernel = distance_kernel)
-            
+                        dist_kernel = distance_kernel,
+                        tau_sq = tau_sq,
+                        phenotype_type = 'logistic')
             
             # hold disease prevalance constant
-            threshold = np.sort(simp.phenotypes)[math.floor(len(simp.phenotypes) * prevalence)]
+            threshold = np.sort(simp.phenotypes)[::-1][math.floor(len(simp.phenotypes) * prevalence)]
             phenotypes = np.where(simp.phenotypes > threshold, 1, 0)
             #phenotypes = np.where(simp.phenotypes > 0.5, 1, 0)
+            #phenotypes = simp.phenotypes
             genotypes = simp.genotypes
             covariates = simp.covariates
             
@@ -61,10 +60,12 @@ def main(var_ratio, pi_sum_ratio, num_muts, num_indivs):
             
             lr_alpha = run_logistic(Xs_0, phenotypes.flatten())
             lr_pi = run_logistic(Xs_2, phenotypes.flatten())
-            p_pi = test_pi(Xs_0, phenotypes.flatten(), genotypes, covariates, lr_alpha)
+            p_pi = test_pi(Xs_0, phenotypes.flatten(), genotypes, covariates, lr_alpha,
+                           regression = 'logistic')
             p_tau = test_tau(Xs_2, phenotypes.flatten(), genotypes,  covariates, distance_kernel, lr_pi,
                      temp_dir = 'temp_files/pi_0_gamma_0.txt',
-                     out_dir = 'type1_sims/pi_0_gamma_0.txt')
+                     out_dir = 'type1_sims/pi_0_gamma_0.txt',
+                     regression = 'logistic')
             print(p_pi, p_tau)
             p_pis.append(p_pi)
             p_gammas.append(p_tau)
@@ -74,16 +75,16 @@ def main(var_ratio, pi_sum_ratio, num_muts, num_indivs):
             continue
         
     df = pd.DataFrame(list(zip(p_pis, p_gammas)), columns=['p_pi', 'p_gamma'])
-    #out_dir = 'power/both_nonzero/var_ratio_' + str(var_ratio) + '_pi_ratio_' + str(pi_sum_ratio) + '/'
-    #out_dir += str(num_muts) + 'muts_' + str(num_indivs) + 'indiv.csv'
-    out_dir = 'type1_error/type1sims_1000indiv_100muts.csv'
-    #df.to_csv(out_dir)
+    out_dir = 'power/v0.5_debug_vars/var_ratio_' + str(var_ratio) + '_pi_ratio_' + str(pi_sum_ratio) + '/'
+    out_dir += str(num_muts) + 'muts_' + str(num_indivs) + 'indiv.csv'
+    #out_dir = 'type1_error/type1sims_500indiv_100muts_dist_kernel.csv'
+    df.to_csv(out_dir)
     
 if __name__ == '__main__':
     #var_ratios = [(i+1)*0.01 for i in range(5)]
-    var_ratios = [0.00]
-    pi_sum_ratios = [0.75]
-    indivs = [1000]
+    var_ratios = [0.01, 0.02, 0.03, 0.04, 0.05]
+    pi_sum_ratios = [0.0, 0.25, 0.5, 0.75, 1.0]
+    indivs = [500]
     
     for vr in var_ratios:
         for psr in pi_sum_ratios:
@@ -91,3 +92,5 @@ if __name__ == '__main__':
                 main(var_ratio=vr, pi_sum_ratio=psr, num_muts=100, num_indivs=indiv)
                 
             
+            
+        
