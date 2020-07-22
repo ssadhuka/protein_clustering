@@ -8,7 +8,7 @@ Created on Tue Jul  7 17:45:33 2020
 This file simulates phenotypes for a specified number of individuals (n) given some parameters, including 
 their genotypes, a protein structure-based distance kernel, and relative weights on fixed and random
 effects.  We assume a mixed effect model, similar to "A Unified Mixed-Effects Model for Rare-Variant Association 
-in Sequencing Studies" (2013) with modifications for the distance kernel.
+in Sequencing Studies" (2013) with modifications for the kernel.
 
 We developed a statistical procedure to test whether mutations in a certain gene tend to cluster
 in their corresponding protein structures.  We use the simulated data from this file to evaluate

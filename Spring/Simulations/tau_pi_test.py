@@ -61,7 +61,7 @@ def test_tau(X, y, genotypes, covariates, distance_kernel, lr_pi, temp_dir, out_
     P_hat_sqrt = sqrtm(P_hat)
     # pay attention to this line - do we need dist kernel in between?
     mixture = P_hat_sqrt @ (genotypes.T @ distance_kernel @ genotypes) @ P_hat_sqrt
-    print(check_symmetric(mixture))
+    #print(check_symmetric(mixture))
     
     # mixture should definitely be PSD because it can be factored as a matrix M * M.T
     #mixture_with_tolerance = mixture + 

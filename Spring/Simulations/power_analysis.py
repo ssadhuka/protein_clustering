@@ -12,71 +12,86 @@ import matplotlib.pyplot as plt
 
 def rejection_region(df, alpha):
     threshold = stats.chi2.isf(q=alpha, df=4)
-    reject_fisher = (df['fisher'] > threshold).sum()/len(df['fisher'])
+    reject_fisher_dist = (df['fisher_dist'] > threshold).sum()/len(df['fisher_dist'])
+    reject_fisher_id = (df['fisher_id'] > threshold).sum()/len(df['fisher_dist'])
     
-    reject_pi = (df['p_pi'] < alpha).sum()/len(df['fisher'])
-    reject_gamma = (df['p_gamma'] < alpha).sum()/len(df['fisher'])
-    reject_tippett = (df['tippett'] < alpha).sum()/len(df['fisher'])
-    return([reject_pi, reject_gamma, reject_fisher, reject_tippett])
+    reject_pi = (df['p_pi'] < alpha).sum()/len(df['p_pi'])
+    reject_tau_dist = (df['p_tau_dist'] < alpha).sum()/len(df['fisher_dist'])
+    reject_tippett_dist = (df['tippett_dist'] < alpha).sum()/len(df['fisher_dist'])
+    
+    reject_tau_id = (df['p_tau_id'] < alpha).sum()/len(df['fisher_id'])
+    reject_tippett_id = (df['tippett_id'] < alpha).sum()/len(df['fisher_id'])
+    print([reject_pi, reject_tau_dist, reject_tau_id, reject_fisher_dist,
+            reject_fisher_id, reject_tippett_dist, reject_tippett_id])
+    return([reject_pi, reject_tau_dist, reject_tau_id, reject_fisher_dist,
+            reject_fisher_id, reject_tippett_dist, reject_tippett_id])
 
 
 def make_fisher(df):
-    df['p_gamma'][df['p_gamma'] == 0] = 0.0000000001
+    df['p_tau_dist'][df['p_tau_dist'] == 0] = 0.0000000001
+    df['p_tau_id'][df['p_tau_id'] == 0] = 0.0000000001
     try:
         df['p_pi'] = pd.to_numeric(df['p_pi'])
     except:
         df['p_pi'] = df['p_pi'].apply(lambda st: st[st.find("(")+1:st.find("+")])
         df['p_pi'] = pd.to_numeric(df['p_pi'])
-    print(df)
+    #print(df)
     
-    df['fisher'] = -2 * np.log(df['p_gamma']) - 2 * np.log(df['p_pi'])
+    df['fisher_dist'] = -2 * np.log(df['p_tau_dist']) - 2 * np.log(df['p_pi'])
+    df['fisher_id'] = -2 * np.log(df['p_tau_id']) - 2 * np.log(df['p_pi'])
     return(df)
 
 
 def make_tippett(df):
-    df['tippett'] = 1 - (1 - np.square(df[['p_pi', 'p_gamma']].max(axis=1)))
+    print(1-np.square(df[['p_pi', 'p_tau_dist']].min(axis=1)))
+    df['tippett_dist'] = 1 - np.square(1 - df[['p_pi', 'p_tau_dist']].min(axis=1))
+    df['tippett_id'] = 1 - np.square(1 - df[['p_pi', 'p_tau_id']].min(axis=1))
     return(df)
 
 
 def main():
     plt.figure(figsize=(8, 6))
-    expld_var = 0.02
-    pi_ratios = [0.0, 0.25, 0.5, 0.75, 1.0]
-    tests = ['fixed', 'random', 'fisher', 'tippett']
-    colors = {'fixed': 'blue', 'random': 'orange', 'fisher': 'green', 'tippett': 'red'}
-    vers = ['v0.5_debug_vars']
+    expld_var = [0.0005, 0.001, 0.005]
+    pi_ratios = [0]
+    tests = ['fixed', 'random_dist', 'random_id','fisher_dist', 'fisher_id',
+             'tippett_dist','tippett_id']
+    colors = {'fixed': 'blue', 'random_dist': 'orange', 'random_id': 'darkorange',
+              'fisher_dist': 'green', 'tippett_dist': 'red', 
+              'fisher_id': 'darkgreen', 'tippett_id': 'darkred'}
+    vers = ['v1_initial']
+    alpha = 0.05
     
     for v in vers:
-        for i, pr in enumerate(pi_ratios):
+        for i, var in enumerate(expld_var):
             #read_dir = '../../type1_error/type1sims_500indiv_100muts.csv'
-            read_dir = 'power/' + str(v) + '/var_ratio_0.02_pi_ratio_' + str(pr)
+            read_dir = 'power/' + str(v) + '/var_ratio_' + str(var)
             read_dir += '/100muts_' + str(500) + 'indiv.csv'
             df_in = pd.read_csv(read_dir, index_col=0)
             df_in = make_fisher(df_in)
             df_in = make_tippett(df_in)
             
-            rejections = rejection_region(df_in, 0.00000001)
+            rejections = rejection_region(df_in, alpha)
             if i == 0:
                 power = rejections
             else:
                 power = np.vstack((power, rejections))
-           # print(pr, rejections)
         for i, test in enumerate(tests):
-            legend_lbl = test + ' ' + str(v)
-            if v == 'v0.5':
-                plt.plot(pi_ratios, power[:,i], marker='o', label=legend_lbl, color=colors[test])
-            if v == 'v0.5_identity_kernel':
-                plt.plot(pi_ratios, power[:,i], marker='x', label=legend_lbl, color=colors[test])
-            if v == 'v0.5_debug_vars':
-                plt.plot(pi_ratios, power[:,i], marker='x', label=legend_lbl, color=colors[test])
+            lbl = str(test)
+            if i == 0:
+                plt.plot(expld_var, power[:,i], marker='o', label = lbl, color=colors[test])
+            if i > 0 and i % 2 == 0:
+                plt.plot(expld_var, power[:,i], marker='o', label = lbl, color=colors[test])
+            elif i > 0 and i % 2 == 1:
+                plt.plot(expld_var, power[:,i], marker='x', label = lbl, color=colors[test])
+            
     
-    plt.xlabel('Percent Explained by Fixed')
+    plt.xlabel('Total Variance Explained')
     plt.ylabel('Power')
-    title = 'Power Simulations, Total Explained Variance = ' + str(expld_var)
+    title = 'Power Simulations, alpha = ' + str(alpha) + ' n_subjects = ' + str(500)
     plt.title(title)
     plt.legend()
     
-    save_to = str(expld_var) + 'power_sims_debug_alpha1e-8.png'
+    save_to = 'power_v1_initial_500_0-05_redo.png'
     plt.savefig(save_to, dpi=400)
         
         

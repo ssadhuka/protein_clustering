@@ -18,14 +18,16 @@ def distances_pairwise(df):
     muts = df[['x', 'y', 'z']].to_numpy()
     return(euclidean_distances(muts, muts))
 
-
-def covariance_matrix(dists, t):
+def covariance_matrix(dists, alpha, t):
     #cov = 1/(dists+1)
-    cov = np.exp(-np.square(dists)/(2*t**2))
+    cov = np.exp(-np.power(dists, alpha)/(2*t**2))
     return(cov)
 
-def select_mutations(df, num_muts):
-    return(df.sample(num_muts))
+def select_mutations(df, num_muts, domains):
+    if not domains:
+        return(df.sample(num_muts))
+    else:
+        pass
 
 
 def set_pi_and_tau(var_to_explain, pi_sum_ratio, comb_maf, eps=1):
@@ -36,6 +38,16 @@ def set_pi_and_tau(var_to_explain, pi_sum_ratio, comb_maf, eps=1):
     scaled_pi = np.sqrt(unscaled_pi / (2 * (1 - comb_maf) * comb_maf))
     tau_sq = sum_pi_tau - unscaled_pi
     return(scaled_pi, tau_sq)
+
+
+def set_betas(var_to_explain, pi_sum_ratio, comb_maf, eps=1):
+    # see math - solve system of linear eqs with (x+y)/(x+y+1) = var_to_explain
+    # and x/(x+y) = pi_sum_ratio, then rescale pi
+    sum_pi_tau = var_to_explain/(1 - var_to_explain)
+    unscaled_pi = sum_pi_tau * pi_sum_ratio
+    scaled_pi = np.sqrt(unscaled_pi / (2 * (1 - comb_maf) * comb_maf))
+    tau_sq = sum_pi_tau - unscaled_pi
+    return(scaled_pi, tau_sq) 
 
 
 def run_logistic(X, y):

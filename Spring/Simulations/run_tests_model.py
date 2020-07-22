@@ -9,6 +9,7 @@ Created on Fri Jul 10 15:53:37 2020
 
 from utils import *
 from tau_pi_test import *
+from simulate_domains import *
 from simulate_phenotypes import SimP
 import numpy as np
 import math
@@ -19,7 +20,9 @@ from scipy.special import logit
 def main(var_ratio, pi_sum_ratio, num_muts, num_indivs):
     protein_id = 'Q01113'
     protein_structure = make_protein_df(protein_id)
-    protein_structure = select_mutations(protein_structure, num_muts)
+    muts = select_domain(protein_structure, 10, 100, 0.5)
+    muts = set_betas(muts, 0.01)
+    protein_structure = select_mutations(protein_structure, num_muts, domains=False)
     
     dists = distances_pairwise(protein_structure)
     distance_kernel = covariance_matrix(dists, 6)
@@ -29,9 +32,12 @@ def main(var_ratio, pi_sum_ratio, num_muts, num_indivs):
     p_gammas = []
     pi_fixed, tau_sq = set_pi_and_tau(var_ratio, pi_sum_ratio, 0.25, eps=1)
     alpha = [0.1, 0.5, 0.5]
+    
+    SimD(500, muts, alpha)
+    
     prevalence = np.exp(logit(alpha[0]))
     
-    for i in range(250):
+    for i in range(2):
         try:
             gamma = np.random.normal(0, np.sqrt(tau_sq), size=100)
             #pi_fixed = [0]
@@ -47,6 +53,7 @@ def main(var_ratio, pi_sum_ratio, num_muts, num_indivs):
             threshold = np.sort(simp.phenotypes)[::-1][math.floor(len(simp.phenotypes) * prevalence)]
             phenotypes = np.where(simp.phenotypes > threshold, 1, 0)
             #phenotypes = np.where(simp.phenotypes > 0.5, 1, 0)
+            #phenotypes = simp.phenotypes
             genotypes = simp.genotypes
             covariates = simp.covariates
             
@@ -61,9 +68,9 @@ def main(var_ratio, pi_sum_ratio, num_muts, num_indivs):
             lr_pi = run_logistic(Xs_2, phenotypes.flatten())
             p_pi = test_pi(Xs_0, phenotypes.flatten(), genotypes, covariates, lr_alpha,
                            regression = 'logistic')
-            p_tau = test_tau(Xs_2, phenotypes.flatten(), genotypes,  covariates, np.eye(100), lr_pi,
-                     temp_dir = 'temp_files/pi_1_gamma_1.txt',
-                     out_dir = 'type1_sims/pi_1_gamma_1.txt',
+            p_tau = test_tau(Xs_2, phenotypes.flatten(), genotypes,  covariates, distance_kernel, lr_pi,
+                     temp_dir = 'temp_files/pi_0_gamma_0.txt',
+                     out_dir = 'type1_sims/pi_0_gamma_0.txt',
                      regression = 'logistic')
             print(p_pi, p_tau)
             p_pis.append(p_pi)
@@ -74,15 +81,15 @@ def main(var_ratio, pi_sum_ratio, num_muts, num_indivs):
             continue
         
     df = pd.DataFrame(list(zip(p_pis, p_gammas)), columns=['p_pi', 'p_gamma'])
-    out_dir = 'power/v0.5_debug_vars_identity_kernel/var_ratio_' + str(var_ratio) + '_pi_ratio_' + str(pi_sum_ratio) + '/'
+    out_dir = 'power/v0.5_debug_vars/var_ratio_' + str(var_ratio) + '_pi_ratio_' + str(pi_sum_ratio) + '/'
     out_dir += str(num_muts) + 'muts_' + str(num_indivs) + 'indiv.csv'
-    #out_dir = 'type1_error/type1sims_500indiv_100muts_id_kernel.csv'
-    df.to_csv(out_dir)
+    #out_dir = 'type1_error/type1sims_500indiv_100muts_dist_kernel.csv'
+    #df.to_csv(out_dir)
     
 if __name__ == '__main__':
     #var_ratios = [(i+1)*0.01 for i in range(5)]
-    var_ratios = [0.01, 0.02, 0.03, 0.04, 0.05]
-    pi_sum_ratios = [0.0, 0.25, 0.5, 0.75, 1.0]
+    var_ratios = [0.01]
+    pi_sum_ratios = [0.5]
     indivs = [500]
     
     for vr in var_ratios:
@@ -91,3 +98,5 @@ if __name__ == '__main__':
                 main(var_ratio=vr, pi_sum_ratio=psr, num_muts=100, num_indivs=indiv)
                 
             
+            
+        
