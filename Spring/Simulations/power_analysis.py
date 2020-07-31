@@ -21,10 +21,9 @@ def rejection_region(df, alpha):
     
     reject_tau_id = (df['p_tau_id'] < alpha).sum()/len(df['fisher_id'])
     reject_tippett_id = (df['tippett_id'] < alpha).sum()/len(df['fisher_id'])
-    print([reject_pi, reject_tau_dist, reject_tau_id, reject_fisher_dist,
-            reject_fisher_id, reject_tippett_dist, reject_tippett_id])
     return([reject_pi, reject_tau_dist, reject_tau_id, reject_fisher_dist,
             reject_fisher_id, reject_tippett_dist, reject_tippett_id])
+
 
 
 def make_fisher(df):
@@ -51,24 +50,22 @@ def make_tippett(df):
 
 def main():
     plt.figure(figsize=(8, 6))
-    expld_var = [0.0005, 0.001, 0.005]
+    expld_var = [0.02, 0.025]
     pi_ratios = [0]
     tests = ['fixed', 'random_dist', 'random_id','fisher_dist', 'fisher_id',
              'tippett_dist','tippett_id']
     colors = {'fixed': 'blue', 'random_dist': 'orange', 'random_id': 'darkorange',
               'fisher_dist': 'green', 'tippett_dist': 'red', 
               'fisher_id': 'darkgreen', 'tippett_id': 'darkred'}
-    vers = ['v1_initial']
+    vers = ['v1_experiment']
     alpha = 0.05
     
     for v in vers:
         for i, var in enumerate(expld_var):
             #read_dir = '../../type1_error/type1sims_500indiv_100muts.csv'
             read_dir = 'power/' + str(v) + '/var_ratio_' + str(var)
-            read_dir += '/100muts_' + str(500) + 'indiv.csv'
+            read_dir += '/1domains_100muts_' + str(500) + 'indiv.csv'
             df_in = pd.read_csv(read_dir, index_col=0)
-            df_in = make_fisher(df_in)
-            df_in = make_tippett(df_in)
             
             rejections = rejection_region(df_in, alpha)
             if i == 0:
@@ -92,7 +89,7 @@ def main():
     plt.legend()
     
     save_to = 'power_v1_initial_500_0-05_redo.png'
-    plt.savefig(save_to, dpi=400)
+    #plt.savefig(save_to, dpi=400)
         
         
         
